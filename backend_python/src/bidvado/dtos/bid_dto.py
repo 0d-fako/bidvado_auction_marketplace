@@ -3,7 +3,7 @@ from datetime import datetime
 from typing import *
 
 from .auction_dto import CreateAuctionResponse
-from .user_dto import UserRegisterResponse
+from .user_dto import  UserLoginResponse
 from ..data.models.enum.enums import *
 
 @dataclass
@@ -17,7 +17,7 @@ class PlaceBidRequest:
 class PlaceBidResponse:
     id: str
     auction: 'CreateAuctionResponse'
-    bidder : 'UserRegisterResponse'
+    bidder : 'UserLoginResponse'
     amount: float
     created_at: datetime
     is_winning: bool
