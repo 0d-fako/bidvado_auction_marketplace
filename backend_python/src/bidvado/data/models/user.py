@@ -4,7 +4,7 @@ from .enum.enums import UserRole
 
 class User(Document):
     username = StringField(required=True, unique=True)
-    email = StringField(required=True, unique=True)
+    email = EmailField(required=True, unique=True)
     password = StringField(required=True)
     role = EnumField(UserRole, required=True)
     profile_picture = StringField(null=True)

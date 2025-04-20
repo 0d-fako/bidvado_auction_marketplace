@@ -9,7 +9,7 @@ class Auction(Document):
     images = ListField(StringField())
     seller = ReferenceField(User, required=True)
     starting_bid = DecimalField(required=True, precision=2)
-    current_bid = DecimalField(default=0.00, precision=2)
+    current_bid = DecimalField(null=True, precision=2)
     bid_increment = DecimalField(required=True, precision=2)
     start_time = DateTimeField(required=True)
     end_time = DateTimeField(required=True)
