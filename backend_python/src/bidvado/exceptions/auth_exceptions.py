@@ -22,3 +22,7 @@ class ExpiredTokenException(AuthException):
 class NoSuchUserException(AuthException):
     def __init__(self, message="User does not exist"):
         super().__init__(message)
+
+class InvalidActionException(AuthException):
+    def __init__(self, message="Invalid action"):
+        super().__init__(message)

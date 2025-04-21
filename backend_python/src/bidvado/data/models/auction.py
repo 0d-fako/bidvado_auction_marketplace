@@ -7,7 +7,7 @@ class Auction(Document):
     title = StringField(required=True)
     description = StringField()
     images = ListField(StringField())
-    seller = ReferenceField(User, required=True)
+    auctioneer = ReferenceField(User, required=True)
     starting_bid = DecimalField(required=True, precision=2)
     current_bid = DecimalField(null=True, precision=2)
     bid_increment = DecimalField(required=True, precision=2)
