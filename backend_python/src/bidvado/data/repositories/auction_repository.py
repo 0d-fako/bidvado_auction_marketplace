@@ -22,7 +22,7 @@ class AuctionRepository:
         if end_time <= datetime.now():
             raise InvalidAuctionStateException("End time must be in the future")
 
-        auction = Auction(
+        auction = (Auction(
             title=title,
             description=description,
             images=images or [],
@@ -31,10 +31,11 @@ class AuctionRepository:
             bid_increment=bid_increment,
             start_time=datetime.now(),
             end_time=end_time,
-            status=AuctionStatus.PENDING.value,
+            status=AuctionStatus.PENDING,
             created_at=datetime.now(),
             updated_at=datetime.now()
-        ).save()
+        ))
+        auction.save()
 
         return str(auction.id)
 

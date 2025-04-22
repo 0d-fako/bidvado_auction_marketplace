@@ -13,7 +13,7 @@ from src.bidvado.data.repositories.auction_repository import AuctionRepository
 
 from mongoengine import connect
 
-connect(db="test_bidvado_db", host="mongodb://localhost:27017/", alias="default")
+connect(db="test_bidvado_db", host="mongodb://localhost:27017/")
 
 class TestAuctionRepository(unittest.TestCase):
     def setUp(self):
@@ -49,11 +49,11 @@ class TestAuctionRepository(unittest.TestCase):
             updated_at=self.sample_time
         )
 
-    @patch.object(Auction, "save")
+    # @patch.object(Auction, "save", autospec=True)
     @patch("mongoengine.queryset.QuerySet.first")
-    def test_create_auction_success(self, mock_user_first, mock_save):
+    def test_create_auction_success(self, mock_user_first):
         mock_user_id = str(ObjectId())
-        mock_auction_id = str(ObjectId())
+        # mock_auction_id = str(ObjectId())
 
         mock_auctioneer = User(
             id=mock_user_id,
@@ -66,9 +66,9 @@ class TestAuctionRepository(unittest.TestCase):
         mock_user_first.return_value = mock_auctioneer
 
 
-        mock_auction = Mock(spec=Auction)
-        mock_auction.id = mock_auction_id
-        mock_save.return_value = mock_auction
+        # mock_auction = Mock(spec=Auction)
+        # mock_auction.id = mock_auction_id
+        # mock_save.return_value = mock_auction
 
         result = self.repo.create(
             title="Test Auction",
@@ -78,8 +78,15 @@ class TestAuctionRepository(unittest.TestCase):
             end_time=self.end_time
         )
 
-        self.assertEqual(result, mock_auction_id)
-        mock_save.assert_called_once()
+        created_auction = Auction.objects(id=result).first()
+
+        print("Returned Auction ID:", result)
+        print("Stored Auction ID:", created_auction.id)
+
+        self.assertIsNotNone(created_auction)
+        self.assertEqual(result, str(created_auction.id))
+        # self.assertEqual(result, mock_auction_id)
+
 
     @patch("mongoengine.queryset.QuerySet.first")
     def test_create_auction_invalid_user(self, mock_user_first):

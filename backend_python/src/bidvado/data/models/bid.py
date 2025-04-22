@@ -1,7 +1,7 @@
 from mongoengine import *
 from datetime import datetime
-from auction import Auction
-from user import User
+from .auction import Auction
+from .user import User
 
 class Bid(Document):
     auction = ReferenceField(Auction, required=True)
@@ -10,4 +10,4 @@ class Bid(Document):
     created_at = DateTimeField(default=datetime.now)
     is_winning = BooleanField(default=False)
 
-    meta = {"collection": "bid"}
+    meta = {"collection": "bids"}
