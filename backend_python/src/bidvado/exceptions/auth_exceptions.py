@@ -26,3 +26,8 @@ class NoSuchUserException(AuthException):
 class InvalidActionException(AuthException):
     def __init__(self, message="Invalid action"):
         super().__init__(message)
+
+
+class TokenVerificationException(AuthException):
+    def __init__(self, message="Token Verification error"):
+        super().__init__(message)
