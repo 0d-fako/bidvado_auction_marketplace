@@ -25,7 +25,6 @@ class AuthService(IAuthService):
         self.jwt_manager = JWTManager()
 
     def register(self, request: UserRegisterRequest) -> UserRegisterResponse:
-        """Complete user registration with full DTO compliance"""
         if self.user_repo.find_by_email(request.email):
             raise UserAlreadyExistsException("Email already registered")
 
@@ -51,7 +50,6 @@ class AuthService(IAuthService):
         )
 
     def login(self, request: UserLoginRequest) -> UserLoginResponse:
-        """Complete login with all required DTO fields"""
         user = self.user_repo.find_by_email(request.email)
         if not user or not self._verify_password(request.password, user.password):
             raise InvalidCredentialsException("Invalid credentials")
@@ -75,7 +73,6 @@ class AuthService(IAuthService):
         )
 
     def validate_token(self, token: str) -> Tuple[bool, Optional[str]]:
-        """Token validation with user existence check"""
         try:
             valid, user_id = self.jwt_manager.verify_token(token)
             return valid and bool(self.user_repo.find_by_id(user_id)), user_id
@@ -83,7 +80,6 @@ class AuthService(IAuthService):
             return False, None
 
     def request_password_reset(self, email: str) -> bool:
-        """Password reset initiation with proper JWT claims"""
         user = self.user_repo.find_by_email(email)
         if not user:
             return True
@@ -101,7 +97,6 @@ class AuthService(IAuthService):
         return True
 
     def reset_password(self, token: str, new_password: str) -> bool:
-        """Complete password reset flow"""
         try:
             valid, user_id = self.jwt_manager.verify_token(token)
             if not valid or not user_id:
