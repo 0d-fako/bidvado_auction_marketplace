@@ -25,6 +25,7 @@ class UserRegisterResponse:
 
 @dataclass
 class UserLoginRequest:
+    email: str
     username: str
     password: str
 
