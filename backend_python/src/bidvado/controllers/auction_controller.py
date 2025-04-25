@@ -1,7 +1,7 @@
 from flask import Blueprint, request, jsonify
 from src.bidvado.services.interfaces.auction_service import IAuctionService
 from src.bidvado.dtos.auction_dto import CreateAuctionRequest
-from src.bidvado.exceptions.auction_exceptions import AuctionNotFoundException, UnauthorizedActionException
+from src.bidvado.exceptions.auction_exceptions import AuctionNotFoundException, UnauthorizedException
 
 def auction_bp(auction_service: IAuctionService):
 

@@ -1,6 +1,6 @@
 from flask import Blueprint, request, jsonify
 
-from ..app import token_required
+from src.bidvado.utils.token_validator import token_required
 from ..services.bid_service_impl import BidService
 from ..dtos.bid_dto import PlaceBidRequest
 from ..exceptions.bid_exceptions import InvalidBidException, AuctionClosedException

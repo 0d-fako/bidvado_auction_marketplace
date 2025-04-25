@@ -33,7 +33,7 @@ def create_app():
     bid_repository = BidRepository()
 
 
-    auth_service = AuthService(user_repository, app.config['SECRET_KEY'])
+    auth_service = AuthService(user_repository)
     auction_service = AuctionService(auction_repository, user_repository)
     event_emitter = EventEmitter(socketio)
     bid_service = BidService(
