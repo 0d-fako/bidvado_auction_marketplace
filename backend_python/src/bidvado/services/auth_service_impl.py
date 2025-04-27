@@ -2,29 +2,37 @@ from datetime import datetime, timedelta
 from typing import Optional, Tuple
 import bcrypt
 
-from src.bidvado.utils.jwt_handler import JWTManager
-from src.bidvado.dtos.user_dto import (
+from src.bidvado.exceptions.auth_exceptions import InvalidCredentialsException
+from ..utils.jwt_handler import JWTManager
+from ..dtos.user_dto import (
     UserRegisterRequest,
     UserRegisterResponse,
     UserLoginRequest,
     UserLoginResponse
 )
-from src.bidvado.exceptions.auth_exceptions import (
+from ..exceptions.auth_exceptions import (
     InvalidCredentialsException,
     UserAlreadyExistsException,
     TokenVerificationException,
-    UserCreationException
+    UserCreationException,
+    UnauthorizedAccessException
 )
-from src.bidvado.services.interfaces.auth_service import IAuthService
-from src.bidvado.data.repositories.user_repository import UserRepository
+from ..services.interfaces.auth_service import IAuthService
+from ..data.repositories.user_repository import UserRepository
 
 
 class AuthService(IAuthService):
-    def __init__(self, user_repository: UserRepository):
+    """
+    Implementation of the authentication service.
+    Handles user registration, login, and token validation.
+    """
+
+    def __init__(self, user_repository: UserRepository, jwt_manager: JWTManager):
         self.user_repo = user_repository
-        self.jwt_manager = JWTManager()
+        self.jwt_manager = jwt_manager
 
     def register(self, request: UserRegisterRequest) -> UserRegisterResponse:
+
         if self.user_repo.find_by_email(request.email):
             raise UserAlreadyExistsException("Email already registered")
 
@@ -51,6 +59,7 @@ class AuthService(IAuthService):
 
     def login(self, request: UserLoginRequest) -> UserLoginResponse:
         user = self.user_repo.find_by_email(request.email)
+
         if not user or not self._verify_password(request.password, user.password):
             raise InvalidCredentialsException("Invalid credentials")
 
@@ -63,30 +72,31 @@ class AuthService(IAuthService):
             id=str(user.id),
             username=user.username,
             email=user.email,
+            role=user.role,
             created_at=user.created_at,
             updated_at=user.updated_at,
             access_token=token,
-            role=user.role,
             profile_picture=user.profile_picture,
-            token_type = "bearer",
-
+            token_type="Bearer"
         )
 
     def validate_token(self, token: str) -> Tuple[bool, Optional[str]]:
+
         try:
-            valid, user_id = self.jwt_manager.verify_token(token)
-            return valid and bool(self.user_repo.find_by_id(user_id)), user_id
+            is_valid, user_id, _ = self.jwt_manager.verify_token(token)
+            return is_valid, user_id
         except TokenVerificationException:
             return False, None
 
-    def request_password_reset(self, email: str) -> bool:
+    def request_password_reset(self, email: str) -> InvalidCredentialsException | bool:
         user = self.user_repo.find_by_email(email)
         if not user:
-            return True
+            return InvalidCredentialsException("Unable to rest password")
+
 
         reset_token = self.jwt_manager.encode_token(
             user_id=str(user.id),
-            role=user.role.value
+            role=user.role
         )
 
         self.user_repo.update(
@@ -94,12 +104,13 @@ class AuthService(IAuthService):
             reset_token=reset_token,
             reset_token_expiry=datetime.now() + timedelta(minutes=30)
         )
+
         return True
 
     def reset_password(self, token: str, new_password: str) -> bool:
         try:
-            valid, user_id = self.jwt_manager.verify_token(token)
-            if not valid or not user_id:
+            is_valid, user_id, _ = self.jwt_manager.verify_token(token)
+            if not is_valid or not user_id:
                 return False
 
             user = self.user_repo.find_by_reset_token(token)

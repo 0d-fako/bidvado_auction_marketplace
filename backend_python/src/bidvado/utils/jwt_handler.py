@@ -2,7 +2,7 @@ import jwt
 import os
 import functools
 from datetime import datetime, timedelta
-from typing import Optional, Dict, Tuple, Callable, Any
+from typing import Optional, Dict, Tuple, Callable
 from flask import request, jsonify
 
 from ..data.repositories.user_repository import UserRepository
@@ -10,7 +10,7 @@ from ..exceptions.auth_exceptions import (
     InvalidTokenException,
     ExpiredTokenException,
     TokenVerificationException,
-    UnauthorizedAccessException
+    # UnauthorizedAccessException
 )
 
 

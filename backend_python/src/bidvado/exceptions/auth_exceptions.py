@@ -27,12 +27,14 @@ class InvalidActionException(AuthException):
     def __init__(self, message="Invalid action"):
         super().__init__(message)
 
-
 class TokenVerificationException(AuthException):
-    def __init__(self, message="Token Verification error"):
+    def __init__(self, message="Token verification error"):
         super().__init__(message)
-
 
 class UserCreationException(AuthException):
     def __init__(self, message="Unable to create new user"):
+        super().__init__(message)
+
+class UnauthorizedAccessException(AuthException):
+    def __init__(self, message="You do not have permission to perform this action"):
         super().__init__(message)
