@@ -8,15 +8,17 @@ from ..dtos.auction_dto import CreateAuctionRequest, CreateAuctionResponse
 from ..dtos.user_dto import UserRegisterResponse
 from ..data.models.enum.enums import AuctionStatus, UserRole
 from ..exceptions.auction_exceptions import AuctionNotFoundException, InvalidAuctionStateException
-from ..exceptions.auth_exceptions import  InvalidActionException
+from ..exceptions.auth_exceptions import InvalidActionException
 
 
 class AuctionService(IAuctionService):
+
     def __init__(self, auction_repository: AuctionRepository, user_repository: UserRepository):
         self.auction_repository = auction_repository
         self.user_repository = user_repository
 
     def create_auction(self, request: CreateAuctionRequest) -> CreateAuctionResponse:
+
         auction_id = self.auction_repository.create(
             title=request.title,
             auctioneer_id=request.seller_id,
@@ -28,14 +30,17 @@ class AuctionService(IAuctionService):
         )
 
         auction = self.auction_repository.find_by_id(auction_id)
+        if not auction:
+            raise AuctionNotFoundException("Failed to create auction")
 
         return self._map_to_dto(auction)
 
-
     def get_auction(self, auction_id: str) -> Optional[CreateAuctionResponse]:
+
         auction = self.auction_repository.find_by_id(auction_id)
         if not auction:
             return None
+
         return self._map_to_dto(auction)
 
     def get_auctions(self, page: int = 1, page_size: int = 10,
@@ -49,14 +54,25 @@ class AuctionService(IAuctionService):
 
     def update_auction(self, auction_id: str, user_id: str, user_role: str,
                        update_data: Dict) -> Optional[CreateAuctionResponse]:
+
+        auction = self.auction_repository.find_by_id(auction_id)
+        if not auction:
+            raise AuctionNotFoundException("Auction not found")
+
+        if str(auction.auctioneer.id) != user_id and user_role != UserRole.ADMIN.value:
+            raise InvalidActionException("Only the auctioneer or admin can update this auction")
+
+
         updated_auction = self.auction_repository.update(auction_id, user_role, **update_data)
         if not updated_auction:
             return None
+
         return self._map_to_dto(updated_auction)
 
-    def approve_auction(self, auction_id: str, admin_id: str) -> Optional[CreateAuctionResponse]:
-        admin = self.user_repository.find_by_id(admin_id)
-        if not admin or admin.role != UserRole.ADMIN:
+    def approve_auction(self, auction_id: str, user_id: str) -> Optional[CreateAuctionResponse]:
+
+        admin = self.user_repository.find_by_id(user_id)
+        if not admin or admin.role != UserRole.ADMIN.value:
             raise InvalidActionException("Only admins can approve auctions")
 
 
@@ -75,10 +91,11 @@ class AuctionService(IAuctionService):
     def cancel_auction(self, auction_id: str, user_id: str, user_role: str) -> bool:
         auction = self.auction_repository.find_by_id(auction_id)
         if not auction:
-            raise AuctionNotFoundException()
+            raise AuctionNotFoundException("Auction not found")
 
         if str(auction.auctioneer.id) != user_id and user_role != UserRole.ADMIN.value:
             raise InvalidActionException("Only the auctioneer or admin can cancel an auction")
+
 
         if auction.status == AuctionStatus.COMPLETED.value:
             raise InvalidAuctionStateException("Cannot cancel a completed auction")
@@ -98,12 +115,27 @@ class AuctionService(IAuctionService):
                 update_data = {'status': AuctionStatus.COMPLETED.value}
                 self.auction_repository.update(
                     str(auction.id),
-                    UserRole.ADMIN.value,
+                    UserRole.ADMIN.value,  # System update acts as admin
                     **update_data
                 )
                 updated_ids.append(str(auction.id))
 
         return updated_ids
+
+    def activate_approved_auctions(self) -> List[str]:
+        approved_auctions = self.auction_repository.find_by_status(AuctionStatus.APPROVED)
+
+        activated_ids = []
+        for auction in approved_auctions:
+            if auction.start_time <= datetime.now():
+                update_data = {'status': AuctionStatus.ACTIVE.value}
+                self.auction_repository.update(
+                    str(auction.id),
+                    UserRole.ADMIN.value,
+                    **update_data
+                )
+                activated_ids.append(str(auction.id))
+        return activated_ids
 
     def _map_to_dto(self, auction) -> CreateAuctionResponse:
         seller = self._map_user_to_dto(auction.auctioneer)
