@@ -24,7 +24,7 @@ class CreateAuctionResponse:
     title: str
     description: Optional[str]
     images: List[str]
-    seller: 'UserRegisterResponse'
+    auctioneer_id: 'UserRegisterResponse'
     starting_bid: float
     current_bid: Optional[float]
     bid_increment: float

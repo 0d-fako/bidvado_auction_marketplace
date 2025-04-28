@@ -26,7 +26,7 @@ def init_auction_routes(auction_service: AuctionService, jwt_manager: JWTManager
 
             auction_request = CreateAuctionRequest(
                 title=data.get('title'),
-                seller_id=user_id,  # Use authenticated user as seller
+                seller_id=user_id,
                 starting_bid=float(data.get('starting_bid', 0)),
                 bid_increment=float(data.get('bid_increment', 0)),
                 start_time=start_time,
@@ -38,6 +38,7 @@ def init_auction_routes(auction_service: AuctionService, jwt_manager: JWTManager
 
             if not auction_request.title or auction_request.starting_bid <= 0 or auction_request.bid_increment <= 0:
                 return jsonify({'error': 'Title, valid starting bid, and bid increment are required'}), 400
+
 
             auction = auction_service.create_auction(auction_request)
 
@@ -92,11 +93,12 @@ def init_auction_routes(auction_service: AuctionService, jwt_manager: JWTManager
     @auction_bp.route('/<auction_id>', methods=['PUT'])
     @jwt_manager.token_required
     def update_auction(user_id, auction_id):
+
         try:
             data = request.json
 
+            is_valid,user_id, role = jwt_manager.verify_token(jwt_manager._extract_token())
 
-            is_valid, user_id, role = jwt_manager.verify_token(jwt_manager._extract_token())
 
             update_data = {}
             allowed_fields = ['title', 'description', 'starting_bid', 'bid_increment', 'end_time', 'images']
@@ -112,7 +114,7 @@ def init_auction_routes(auction_service: AuctionService, jwt_manager: JWTManager
                     else:
                         update_data[field] = data[field]
 
-            # Update auction
+
             updated_auction = auction_service.update_auction(auction_id, user_id, role, update_data)
             if not updated_auction:
                 return jsonify({'error': 'Auction not found or update failed'}), 404
@@ -128,9 +130,6 @@ def init_auction_routes(auction_service: AuctionService, jwt_manager: JWTManager
     @auction_bp.route('/<auction_id>/approve', methods=['PATCH'])
     @jwt_manager.role_required('admin')
     def approve_auction(user_id, auction_id):
-        """
-        Approve an auction (admin only)
-        """
         try:
             updated_auction = auction_service.approve_auction(auction_id, user_id)
             if not updated_auction:
@@ -144,15 +143,10 @@ def init_auction_routes(auction_service: AuctionService, jwt_manager: JWTManager
 
     @auction_bp.route('/<auction_id>/cancel', methods=['PATCH'])
     @jwt_manager.token_required
-    def cancel_auction(user_id, auction_id):
-        """
-        Cancel an auction
-        """
+    def cancel_auction(auction_id):
         try:
-            # Get user role from token
-            _, _, role = jwt_manager.verify_token(jwt_manager._extract_token())
+            is_valid, user_id, role = jwt_manager.verify_token(jwt_manager._extract_token())
 
-            # Cancel auction
             success = auction_service.cancel_auction(auction_id, user_id, role)
             if not success:
                 return jsonify({'error': 'Auction not found or cancellation failed'}), 404
