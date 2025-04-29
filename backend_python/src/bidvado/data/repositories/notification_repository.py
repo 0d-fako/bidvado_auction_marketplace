@@ -7,6 +7,7 @@ from ..models.auction import Auction
 from ..models.enum.enums import NotificationType
 from ...exceptions.auth_exceptions import NoSuchUserException
 from ...exceptions.auction_exceptions import AuctionNotFoundException
+from ...exceptions.notification_exceptions import NoSuchNotificationException
 
 
 class NotificationRepository:
@@ -32,6 +33,12 @@ class NotificationRepository:
         ).save()
 
         return str(notification.id)
+
+    def find_by_id(self, notification_id):
+        notification = Notification.objects(id=notification_id).first()
+        if not notification:
+            raise NoSuchNotificationException("Notification not found")
+        return notification
 
     def find_by_user(self, user_id: str, page: int = 1, page_size: int = 10) -> List[Notification]:
         user = User.objects(id=user_id).first()
