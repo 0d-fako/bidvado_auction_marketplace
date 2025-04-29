@@ -80,7 +80,7 @@ def create_app():
 
     app.register_blueprint(init_auth_routes(auth_service))
     app.register_blueprint(init_auction_routes(auction_service, jwt_manager))
-    app.register_blueprint(init_bid_routes(bid_service))
+    app.register_blueprint(init_bid_routes(bid_service, jwt_manager))
     app.register_blueprint(init_notification_routes(notification_service, jwt_manager))
 
 
