@@ -78,5 +78,13 @@ class BidRepository:
         return Bid.objects(auction=auction, is_winning=True).first() or \
             Bid.objects(auction=auction).order_by("-amount").first()
 
+    def find_by_bidder(self, bidder_id: str, page: int = 1, page_size: int = 10) -> List[Bid]:
+        bidder = User.objects(id=bidder_id).first()
+        if not bidder:
+            raise BidException("Invalid bidder ID")
+
+        return self.find_many({'bidder': bidder}, sort_by="-created_at",
+                              page=page, page_size=page_size)
+
     def count(self, filter_criteria: Dict = None) -> int:
         return Bid.objects(**(filter_criteria or {})).count()

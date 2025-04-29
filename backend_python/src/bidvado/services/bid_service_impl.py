@@ -5,12 +5,11 @@ from ..data.repositories.bid_repository import BidRepository
 from ..data.repositories.auction_repository import AuctionRepository
 from ..data.repositories.user_repository import UserRepository
 from ..dtos.bid_dto import PlaceBidRequest, PlaceBidResponse
-# from ..dtos.auction_dto import CreateAuctionResponse
-from ..dtos.user_dto import UserLoginResponse
-# from ..exceptions.bid_exceptions import BidException
+from ..dtos.auction_dto import CreateAuctionResponse
+from ..dtos.user_dto import UserLoginResponse, UserRegisterResponse
 from ..exceptions.auction_exceptions import AuctionNotFoundException
 from ..exceptions.auth_exceptions import NoSuchUserException
-from ..websockets.event_emitter import EventEmitter
+from ..websockets.websocket_handler import WebSocketHandler
 
 
 class BidService(IBidService):
@@ -19,17 +18,18 @@ class BidService(IBidService):
                  auction_repository: AuctionRepository,
                  user_repository: UserRepository,
                  notification_service,
-                 event_emitter: EventEmitter):
+                 websocket_handler: WebSocketHandler):
         self.bid_repository = bid_repository
         self.auction_repository = auction_repository
         self.user_repository = user_repository
         self.notification_service = notification_service
-        self.event_emitter = event_emitter
+        self.websocket_handler = websocket_handler
 
     def place_bid(self, request: PlaceBidRequest) -> PlaceBidResponse:
         auction = self.auction_repository.find_by_id(request.auction_id)
         if not auction:
             raise AuctionNotFoundException()
+
 
         bidder = self.user_repository.find_by_id(request.bidder_id)
         if not bidder:
@@ -50,7 +50,7 @@ class BidService(IBidService):
         bid = self.bid_repository.find_by_id(bid_id)
 
 
-        if previous_bidder_id and previous_bidder_id != request.bidder_id:
+        if previous_bidder_id and previous_bidder_id != request.bidder_id and self.notification_service:
             self.notification_service.notify_outbid(
                 auction_id=request.auction_id,
                 previous_bidder_id=previous_bidder_id,
@@ -58,7 +58,7 @@ class BidService(IBidService):
             )
 
 
-        self._emit_bid_event(bid)
+        self._send_bid_update(bid)
 
 
         return self._map_to_dto(bid)
@@ -82,8 +82,9 @@ class BidService(IBidService):
 
         return self._map_to_dto(bid)
 
-    def _emit_bid_event(self, bid):
-        event_data = {
+    def _send_bid_update(self, bid):
+
+        bid_data = {
             'auction_id': str(bid.auction.id),
             'bid_id': str(bid.id),
             'bidder_id': str(bid.bidder.id),
@@ -93,19 +94,40 @@ class BidService(IBidService):
             'is_winning': bid.is_winning
         }
 
+        self.websocket_handler.emit_to_auction(
+            auction_id=str(bid.auction.id),
+            event='new_bid',
+            data=bid_data
+        )
 
-        self.event_emitter.emit('new_bid', event_data, f'auction_{bid.auction.id}')
+    def get_user_bids(self, user_id: str, page: int = 1,
+                          page_size: int = 10) -> List[PlaceBidResponse]:
 
+            user = self.user_repository.find_by_id(user_id)
+            if not user:
+                raise NoSuchUserException("User not found")
 
-        self.event_emitter.emit('auction_update', event_data)
+            bids = self.bid_repository.find_by_bidder(user_id, page, page_size)
+            return [self._map_to_dto(bid) for bid in bids]
 
     def _map_to_dto(self, bid) -> PlaceBidResponse:
-        from ..services.auction_service_impl import AuctionService
-
-
-        auction_service = AuctionService(self.auction_repository, self.user_repository)
-        auction_dto = auction_service._map_to_dto(bid.auction)
-
+        auction_dto = CreateAuctionResponse(
+            id=str(bid.auction.id),
+            title=bid.auction.title,
+            description=bid.auction.description,
+            images=bid.auction.images,
+            auctioneer_id=self._map_user_to_dto(bid.auction.auctioneer),
+            starting_bid=float(bid.auction.starting_bid),
+            current_bid=float(bid.auction.current_bid) if bid.auction.current_bid else None,
+            bid_increment=float(bid.auction.bid_increment),
+            start_time=bid.auction.start_time,
+            end_time=bid.auction.end_time,
+            status=bid.auction.status,
+            created_at=bid.auction.created_at,
+            updated_at=bid.auction.updated_at,
+            approved_by=self._map_user_to_dto(bid.auction.approved_by) if bid.auction.approved_by else None,
+            approved_at=bid.auction.approved_at
+        )
 
         bidder_dto = UserLoginResponse(
             id=str(bid.bidder.id),
@@ -114,7 +136,7 @@ class BidService(IBidService):
             role=bid.bidder.role,
             created_at=bid.bidder.created_at,
             updated_at=bid.bidder.updated_at,
-            access_token="",
+            access_token="",  # Empty token as it's not needed here
             profile_picture=bid.bidder.profile_picture
         )
 
@@ -125,4 +147,18 @@ class BidService(IBidService):
             amount=float(bid.amount),
             created_at=bid.created_at,
             is_winning=bid.is_winning
+        )
+
+    def _map_user_to_dto(self, user) -> Optional[UserRegisterResponse]:
+        if not user:
+            return None
+
+        return UserRegisterResponse(
+            id=str(user.id),
+            username=user.username,
+            email=user.email,
+            role=user.role,
+            created_at=user.created_at,
+            updated_at=user.updated_at,
+            profile_picture=user.profile_picture
         )
