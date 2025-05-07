@@ -43,8 +43,17 @@ def init_auth_routes(auth_service: AuthService):
 
             user = auth_service.register(register_request)
 
+            response = {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+                "role": user.role.value,
+                "created_at": user.created_at.isoformat() if hasattr(user.created_at, 'isoformat') else user.created_at,
+                "updated_at": user.updated_at.isoformat() if hasattr(user.updated_at, 'isoformat') else user.updated_at,
+                "profile_picture": user.profile_picture
+            }
 
-            return jsonify(user.__dict__), 201
+            return jsonify(response), 201
         except UserAlreadyExistsException as e:
             return jsonify({'error': str(e)}), 409
         except UserCreationException as e:
