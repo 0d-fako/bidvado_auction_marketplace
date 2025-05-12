@@ -22,6 +22,10 @@ class UserRepository:
     def find_by_id(self, user_id: str) -> Optional[User]:
         return User.objects(id=user_id).first()
 
+
+    def find_by_username(self, username: str) -> Optional[User]:
+        return User.objects(username=username).first()
+
     def find_by_email(self, email: str) -> Optional[User]:
         return User.objects(email=email).first()
 
@@ -43,3 +47,4 @@ class UserRepository:
             raise NoSuchUserException("User not found.")
         user.delete()
         return True
+

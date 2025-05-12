@@ -22,10 +22,6 @@ from ..data.repositories.user_repository import UserRepository
 
 
 class AuthService(IAuthService):
-    """
-    Implementation of the authentication service.
-    Handles user registration, login, and token validation.
-    """
 
     def __init__(self, user_repository: UserRepository, jwt_manager: JWTManager):
         self.user_repo = user_repository
@@ -35,6 +31,9 @@ class AuthService(IAuthService):
 
         if self.user_repo.find_by_email(request.email):
             raise UserAlreadyExistsException("Email already registered")
+
+        if self.user_repo.find_by_username(request.username):
+            raise UserAlreadyExistsException("Username already registered")
 
         user_id = self.user_repo.create(
             username=request.username,
